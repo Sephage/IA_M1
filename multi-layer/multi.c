@@ -1,5 +1,4 @@
 #include "multi.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -10,6 +9,8 @@
 #include <unistd.h>
 #include <time.h>
 #include <math.h>
+
+int SIZE = 25;
 
 int load_file(const char* pathName, Layer* input_layer){
     int i;
@@ -38,7 +39,14 @@ void init_weights(Network *network){
     }
 }
 
-int learning(Network *network, double** outputs_desired, int number_file, int* error, double* pot){
+void init_file(char** files, char* dir, int nb_files){
+    int i;
+    for(i=0 ; i<nb_files ; i++){
+        sprintf(files[i], "%s%c.txt", dir, i+65);
+    }
+}
+
+int learning(Network *network, double** outputs_desired, int* error){
     int i,j,k, l;
     char file_name[100];
     double error_rate = 1.0;
@@ -47,25 +55,13 @@ int learning(Network *network, double** outputs_desired, int number_file, int* e
     /*Add loop until condition reached we continue to learn*/
     while(error_rate > max_error){
         error_rate = 0.0;
-        for(i=0;i<26;i++){
+        for(i=0;i<nb_file;i++){
             sprintf(file_name, "../lettre_5*5/%c.txt", i+65); 
             if(load_file(file_name, &(network->layers[0]))){
                 printf("%s problem to load file\n", file_name);
             }
 
             //step 1
-            /*for(j=1 ; j<network->nb_layers ; j++){
-                for(k=0 ; k<network->layers[j].number_neurons ;k++){
-                    double neuron_input = 0.0;
-                    network->layers[j].neurons[k].input = 0.0;
-                    for(l=0 ; l<network->layers[j-1].number_neurons ; l++){
-                        Neuron neur_prev_lay = network->layers[j-1].neurons[l];
-                        neuron_input += neur_prev_lay.input * neur_prev_lay.weights[k];
-                    }
-                    network->layers[j].neurons[k].input = 1/(1+exp(-neuron_input));
-                }
-            }*/
-
             compute_output(network);
 
 
@@ -74,7 +70,6 @@ int learning(Network *network, double** outputs_desired, int number_file, int* e
             for(j=0 ; j<network->layers[network->nb_layers-1].number_neurons ; j++){
                 double output = network->layers[network->nb_layers-1].neurons[j].input;
                 delta_out[j] = output * (1-output) * (outputs_desired[i][j] - output);
-                if(isnan(delta_out[j])) printf("ERROR delta_out[%d]\n",j);
             }
 
             //step 3
@@ -136,40 +131,87 @@ int compute_output(Network *network){
                 neuron_input += neur_prev_lay.input * neur_prev_lay.weights[k];
                 
             }
-            
             network->layers[j].neurons[k].input = 1/(1+exp(-neuron_input));
-            if(isnan(exp(-neuron_input))){
-                printf("ERROR neuron_input %lf\n", neuron_input); 
-                exit(2);
-            }
-            if(isnan(1/1+exp(-neuron_input))){
-                printf("ERROR 2\n");
-                exit(3);
-            }
         }
     }
     return 0;
 }
 
-void test_recognition(const char** files, Network* network, const double* input_vector){
-    int i,j;
-    int change[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    int error_strict; //number of error when the charac isn't recognize
-    int error_soft; //When the character is recognize but other is also recognize
+void test_recognition(char** files, Network* network){
+    int i, j, k, l;
+    int change[22] = {-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    int is_error;
+    int is_correct;
+    int hard_error; //number of error when the charac isn't recognize
+    int soft_error; //When the character is recognize but another char is also recognize
+    int C_NB_TEST = 100;
+    double input_vector[network->layers[0].number_neurons];
 
+    FILE* file;
+    char name_save[50];
 
+    srand(time(NULL));
     for(i=0 ; i<26 ; i++){
+        printf("\n%c\n", i+65);
         if(load_file(files[i], &(network->layers[0]))){
             printf("%s problem to load file\n", files[i]);
         }
 
-        for(i=0 ; i<40 ; i++){
-            compute_output(network);
-            for(i=0 ; i<26 ; i++){
-                if(network->layers[2].neurons[i].input>=0.5) 
-                    printf("%c = %.2f\n", i+65, network->layers[2].neurons[i].input);
+        for(l=0 ; l<network->layers[0].number_neurons ; l++){
+            input_vector[l] = network->layers[0].neurons[l].input;
+        }
+
+        for(j=0 ; j<20 ; j++){
+            hard_error = 0;
+            soft_error = 0;
+            for(k=0 ; k<C_NB_TEST ; k++){
+                is_correct = 0;
+                is_error = 0;
+                for(l=0 ; l <= j ; l++){
+                    int can_change = 0;
+                    while(!can_change){
+                        change[l] = rand()%25;
+                        can_change = 1;
+                        int m;
+                        for(m=0 ; m<l ; m++){
+                            if(change[l] == change[m]) can_change = 0;
+                        }
+                    }
+                    network->layers[0].neurons[change[l]].input = network->layers[0].neurons[change[l]].input*-1 + 1;
+                }
+                compute_output(network);
+                for(l=0 ; l<network->layers[network->nb_layers-1].number_neurons ; l++){
+                    if(network->layers[network->nb_layers-1].neurons[l].input >= 0.5) {
+                        if(l == i){
+                           is_correct = 1;
+                        }
+                        else{ 
+                            is_error = 1;
+                            //printf("(%d, %d) %c = %.2f\n", j, k, l+65, network->layers[network->nb_layers-1].neurons[l].input);
+                        }
+                    }
+                }
+                if(is_correct == 0) {
+                    hard_error++;
+                }
+                else{
+                    if(is_error == 1 && is_correct == 1) 
+                        soft_error++;
+                }
+
+                for(l=0 ; l<network->layers[0].number_neurons ; l++){
+                    network->layers[0].neurons[l].input = input_vector[l];
+                }
             }
-            printf("\n");
+            sprintf(name_save, "%s%c.txt", save_directory, i+65);
+            file = fopen(name_save, "w+");
+            if(file == NULL){
+                printf("%s\n", name_save);
+                perror("Saving file not open\n");
+                exit(1);
+            }
+            fprintf(file, "%d : (%d;%d) ", j+1, soft_error, hard_error);
+            fclose(file);
         }
     }
 }
@@ -187,25 +229,23 @@ void init_output_desired(double** outputs_desired){
 /*
  *
  * */
-int main(int argc, char* argv){
+int main(int argc, char** argv){
     int i,j;
     double** outputs_desired;
+    char *files[nb_file];
     Network network;
 
     network.nb_layers = 3;
-    //Malloc du nombre de couche
     network.layers = malloc(network.nb_layers*sizeof(Layer));
 
     network.layers[0].number_neurons = 25;
-    network.layers[1].number_neurons = 50;
+    network.layers[1].number_neurons = 20;
     network.layers[2].number_neurons = 26;
 
-    //malloc du nombre de neurone par couche
     for(i=0;i<network.nb_layers;i++){
         network.layers[i].neurons = malloc(network.layers[i].number_neurons*sizeof(Neuron));
     }
 
-    //Malloc de chaque vecteur poids de chaque neurone
     for(i=0 ; i<network.nb_layers-1 ; i++){
         for(j=0 ; j<network.layers[i].number_neurons ; j++){
             network.layers[i].neurons[j].weights = malloc(network.layers[i+1].number_neurons*sizeof(double));
@@ -217,15 +257,20 @@ int main(int argc, char* argv){
         outputs_desired[i] = malloc(number_out_neurons * sizeof(double));
     }
 
+    for(i=0 ; i<nb_file ; i++){
+        files[i]=malloc(19*sizeof(char));
+    }
+
     init_weights(&network);
     init_output_desired(outputs_desired);
+    init_file(files, "../lettre_5*5/",26);
 
-    learning(&network, outputs_desired, 26, NULL, NULL);
-    printf("\nEnd learning\n"); 
-    for(i=0 ; i<26 ; i++){
-        printf("%f ", network.layers[2].neurons[i].input);
+    learning(&network, outputs_desired, NULL);
+
+    test_recognition(files, &network);
+
+    for(i=0 ; i<nb_file ; i++){
+        free(files[i]);
     }
-    printf("\n");
-    //test_recognition("../lettre_4*5/E_trans.txt", &network);
     return 0;
 }

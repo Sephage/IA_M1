@@ -1,14 +1,14 @@
-//const int number_neurons = 20;
 const double threshold = 0.5;
 const double eta = 0.2;
 const int nb_file = 26;
 const int number_out_neurons = 26;
 
+const char* save_directory = "results/";
+
 
 typedef struct{
     double* weights;
     double input;
-    //double output;
 }Neuron;
 
 typedef struct{
@@ -21,12 +21,30 @@ typedef struct{
     Layer* layers;
 }Network;
 
-int load_file(const char* path, Layer* input_layer);
-//void test_recognition(const char* file, const int letter, Network *network);
-int learning(Network *network, double** outputs_desired, int number_file, int* error, double* pot);
-void init_weights(Network *network);
-void init_output_desired(double** outputs_desired);
-//void test_recognition(char* file, Network* network);
-int compute_output(Network *network);
-void test_recognition(const char** files, Network* network, const double* input_vector);
+/********************************************/
+/********************************************/
 
+/*
+ * Fill the layer input_layer with the content of one file
+ * */
+int load_file(const char* path, Layer* input_layer);
+
+/*
+ * Initialize wights randomly
+ * */
+void init_weights(Network *network);
+
+/*
+ * Initialize what the result that we want after each loop of learning
+ * */
+void init_output_desired(double** outputs_desired);
+
+/*
+ * Fill files with the path of different file that contain neurons value
+ * */
+void init_file(char** files, char *dir, int nb_files);
+
+int learning(Network *network, double** outputs_desired, int* error);
+void test_recognition(char** files, Network* network);
+
+int compute_output(Network *network);
