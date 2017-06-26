@@ -147,10 +147,19 @@ void test_recognition(char** files, Network* network){
     int C_NB_TEST = 100;
     double input_vector[network->layers[0].number_neurons];
 
-    FILE* file;
+    FILE* file[26];
     char name_save[50];
 
     srand(time(NULL));
+    for(i=0 ; i<26 ; i++){
+        sprintf(name_save, "%s%c.txt", SAVE_DIR, i+65);
+        file[i] = fopen(name_save, "w+");
+        if(file == NULL){
+            printf("%s\n", name_save);
+            perror("Saving file not open\n");
+            exit(1);
+        }
+    }
     for(i=0 ; i<26 ; i++){
         printf("\n%c\n", i+65);
         if(load_file(files[i], &(network->layers[0]))){
@@ -162,6 +171,7 @@ void test_recognition(char** files, Network* network){
         }
 
         for(j=0 ; j<20 ; j++){
+
             hard_error = 0;
             soft_error = 0;
             for(k=0 ; k<C_NB_TEST ; k++){
@@ -203,16 +213,12 @@ void test_recognition(char** files, Network* network){
                     network->layers[0].neurons[l].input = input_vector[l];
                 }
             }
-            sprintf(name_save, "%s%c.txt", save_directory, i+65);
-            file = fopen(name_save, "w+");
-            if(file == NULL){
-                printf("%s\n", name_save);
-                perror("Saving file not open\n");
-                exit(1);
-            }
-            fprintf(file, "%d : (%d;%d) ", j+1, soft_error, hard_error);
-            fclose(file);
+            
+            fprintf(file[i], "%d : (%d;%d) ", j+1, soft_error, hard_error);
         }
+    }
+    for(i=0 ; i<26 ; i++){
+        fclose(file[i]);
     }
 }
 
@@ -269,8 +275,26 @@ int main(int argc, char** argv){
 
     test_recognition(files, &network);
 
+    /**************************************/
+    /************ Free ********************/
+    /**************************************/
     for(i=0 ; i<nb_file ; i++){
         free(files[i]);
     }
+    for(i=0 ; i<network.nb_layers-1 ; i++){
+        for(j=0 ; j<network.layers[i].number_neurons ; j++){
+            free(network.layers[i].neurons[j].weights);
+        }
+    }
+    /*printf("Free neurons\n");
+    for(i=0;i<network.nb_layers;i++){
+        free(network.layers[i].neurons);
+    }*/
+    free(network.layers);
+
+    for(i=0 ; i<nb_file ; i++){
+        free(outputs_desired[i]);
+    }
+    free(outputs_desired);
     return 0;
 }

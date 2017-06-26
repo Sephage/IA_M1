@@ -3,7 +3,7 @@ const double eta = 0.2;
 const int nb_file = 26;
 const int number_out_neurons = 26;
 
-const char* save_directory = "results/";
+const char* SAVE_DIR = "./results/";
 
 
 typedef struct{
