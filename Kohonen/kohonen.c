@@ -15,9 +15,9 @@ static void use(char* prog){
 
 void init_neurons(){
     int i;
-    for(i=0 ; i<NB_NEURONS ; i++){
-        neurons[i].x = cos(2*M_PI*i/NB_NEURONS)/10;
-        neurons[i].y = sin(2*M_PI*i/NB_NEURONS)/10;
+    for(i=0 ; i<nb_neurons ; i++){
+        neurons[i].x = cos(2*M_PI*i/nb_neurons)/2;
+        neurons[i].y = sin(2*M_PI*i/nb_neurons)/2;
     }
 }
 
@@ -26,7 +26,7 @@ int compute_activity(float* weight_map){
     float min = FLT_MAX;
     int ind;
 
-    for(i=0 ; i<NB_NEURONS ; i++){
+    for(i=0 ; i<nb_neurons ; i++){
         if(weight_map[i] < min){
             min = weight_map[i];
             ind = i;
@@ -37,7 +37,7 @@ int compute_activity(float* weight_map){
 
 int update_weight(Coordinate* selected){
     int i;
-    for(i=0 ; i<NB_NEURONS ; i++){
+    for(i=0 ; i<nb_neurons ; i++){
         weight_map[i] = powf(neurons[i].x - selected->x, 2) + powf(neurons[i].y - selected->y, 2);
     }
 }
@@ -46,12 +46,12 @@ int update_weight(Coordinate* selected){
  * Chaque poids est la distance euclidienne entre un neurone et le WDS
  */
 void init_weight(float** weight_map){
-    weight_map = malloc(NB_NEURONS * sizeof(float));
+    weight_map = malloc(nb_neurons * sizeof(float));
 }
 
 double neighborhood_function(float dist, float var){
     int a = 1.84;
-    if(dist == 0) return var/2;
+    if(dist == 0) return 1;
     return var/2 * (sin(a*dist)/a*dist) * exp(-powf(dist,2)/powf(var,2));
 }
 
@@ -62,8 +62,11 @@ double learning_rate(int cpt){
 
 void update_neurons(Coordinate selected, int cpt, int win){
     int i;
-    for(i=0 ; i<NB_NEURONS ; i++){
-        neurons[i].x += 0.01 * (selected.x - neurons[i].x) * neighborhood_function(abs(win - i), 1.9 - (cpt/1000000));
-        neurons[i].y += 0.01 * (selected.y - neurons[i].y) * neighborhood_function(abs(win - i), 1.9 - (cpt/1000000));
+    float s = 1.9;
+    int iteration = 1500000;
+    float epsilon = 0.02;
+    for(i=0 ; i<nb_neurons ; i++){
+        neurons[i].x += epsilon * (selected.x - neurons[i].x) * neighborhood_function(abs(win - i), s - (cpt/iteration));
+        neurons[i].y += epsilon * (selected.y - neurons[i].y) * neighborhood_function(abs(win - i), s - (cpt/iteration));
     }
 }

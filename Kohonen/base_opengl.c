@@ -22,7 +22,7 @@ utilise GL et glut
 int cpt=0; 
 int anglex, angley, xold, yold, x, y;
 char presse,pau;
-int nb_input = 10;
+int nb_input = NB_NEURONS/2;
 
 /* affiche la chaine fmt a partir des coordonn�es x,y*/
 void draw_text(float x, float y, const char *fmt, ...)
@@ -60,38 +60,35 @@ void draw_text(float x, float y, const char *fmt, ...)
 
 int main(int argc,char **argv) {
     int c; 
-    /*int rand = 0;
+    int rand = 0;
 
     int errflg = 0;
     extern char* optarg; 
     extern int optind, opterr; 
     char* progname = argv[0];
-
-    while ((c = getopt(argc , argv, "n:r")) != -1){
+    nb_neurons = NB_NEURONS;
+    while ((c = getopt(argc , argv, "i:n:")) != -1){
         switch (c) {
-            case 'r':
-                rand = 1;
+            case 'i':
+                nb_input = atoi(optarg);
+                if(nb_input > nb_neurons/2){
+                    puts("ville max = nb neuron/2\n");
+                    nb_input = nb_neurons-20;
+                }
                 break;
             case 'n':
-                nb_input = atoi(optarg);
+                nb_neurons = atoi(optarg);
                 break;
             case '?':
                 errflg = 1;
                 break;
         }
     }
-    if (errflg)
-        //use(progname);
+    printf("%d\n", nb_neurons);
+    weight_map = malloc(nb_neurons*sizeof(float));
+    neurons = malloc(nb_neurons*sizeof(Coordinate));
 
-    /*if(!rand){
-        nb_input = init_input(&input, "input.sav");
-        for(c=0 ; c < nb_input ; c++){
-            input[c].x = input[c].x/WIDTH;
-            input[c].y = input[c].y/HEIGHT;
-            printf("(%f;%f)\n", input[c].x, input[c].y);
-        }
-    }
-    else{*/
+
     srand48(time(NULL));
     srand(time(NULL));
     input = malloc(nb_input * sizeof(Coordinate));
@@ -99,13 +96,7 @@ int main(int argc,char **argv) {
         input[c].x = 2*drand48() - 1;
         input[c].y = 2*drand48() - 1;
     }
-    // }
- 
 
-
-    // init kohonen
-    srand(time(NULL));
-    //init_dataset();
     init_neurons();
 
     /* initilisation de glut et creation de la fenetre */
@@ -149,14 +140,14 @@ void affichage() {
 
 
     glBegin(GL_POINTS);
-    glColor3f(0.0,1.0,0.0);
+    glColor3f(0.0,0.5,0.2);
     for (size_t i = 0; i < nb_input; i++) {
         Coordinate coord = input[i];
         glVertex2f(coord.x, coord.y);
     }
     // neurons
     glColor3f(1.0,0.0,0.0);
-    for (size_t i = 0; i < NB_NEURONS; i++) {
+    for (size_t i = 0; i < nb_neurons; i++) {
         Coordinate neur = neurons[i];
         glVertex2f(neur.x, neur.y);
     }
@@ -164,7 +155,7 @@ void affichage() {
 
 
     glBegin(GL_LINE_LOOP);
-    for (size_t i = 0; i < NB_NEURONS; i++) {
+    for (size_t i = 0; i < nb_neurons; i++) {
         Coordinate neur = neurons[i];
         glVertex2f(neur.x, neur.y);
     }
@@ -181,23 +172,25 @@ void affichage() {
 void idle(){
     int i;
     if(pau){
-        int index;
-        cpt++;
-        index = rand()%nb_input;
+        if(cpt < 1750000){
+            int index;
+            cpt++;
+            index = rand()%nb_input;
 
-        // simulate
-        update_weight(&input[index]);
+            // simulate
+            update_weight(&input[index]);
 
-        // compare
-        int winner_index;
-        winner_index = compute_activity(weight_map);
+            // compare
+            int winner_index;
+            winner_index = compute_activity(weight_map);
 
-        // update
-        update_neurons(input[index], cpt, winner_index);
+            // update
+            update_neurons(input[index], cpt, winner_index);
 
-        // display
-        if (cpt%1000 == 0) {
-            glutPostRedisplay();
+            // display
+            if (cpt%1000 == 0) {
+                glutPostRedisplay();
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 #ifndef KOHONEN_H
 #define KOHONEN_H
 
-#define NB_NEURONS 30
+#define NB_NEURONS 20
 #define WIDTH 20
 #define HEIGHT 20
 
@@ -11,9 +11,10 @@ typedef struct coord{
     float y;
 }Coordinate;
 
-float weight_map[NB_NEURONS];
-Coordinate neurons[NB_NEURONS];
+float *weight_map;
+Coordinate *neurons;
 Coordinate* input;
+int nb_neurons;
 
 static void use(char* prog);
 int compute_activity();
